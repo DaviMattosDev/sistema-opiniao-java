@@ -16,7 +16,7 @@ import javax.swing.UIManager;
  *
  * @author Davi
  */
-public class Opniao extends javax.swing.JFrame {
+public class Opiniao extends javax.swing.JFrame {
 
     private int medioCount = 0;
     private int bomCount = 0;
@@ -24,7 +24,7 @@ public class Opniao extends javax.swing.JFrame {
     /**
      * Creates new form Sistema
      */
-    public Opniao() {
+    public Opiniao() {
         initComponents();
     }
 
