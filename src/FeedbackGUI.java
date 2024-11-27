@@ -1,14 +1,13 @@
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
+import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import javax.imageio.ImageIO;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 
-// Classe abstrata FeedbackButton
 abstract class FeedbackButton extends JButton implements ActionListener {
     protected FeedbackGUI feedbackGUI;
     protected JLabel countLabel;
@@ -30,14 +29,14 @@ abstract class FeedbackButton extends JButton implements ActionListener {
         setBackground(color);
         setForeground(Color.WHITE);
         setFocusPainted(false);
-        setPreferredSize(new Dimension(400, 300));
+        setPreferredSize(new Dimension(250, 250));
         setOpaque(true);
         setBorderPainted(false);
+        setBorder(BorderFactory.createLineBorder(color.darker(), 5, true));
 
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
 
-        // Adicionando o emoji
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weighty = 0.6;
@@ -47,7 +46,6 @@ abstract class FeedbackButton extends JButton implements ActionListener {
         labelEmoji.setForeground(Color.WHITE);
         add(labelEmoji, gbc);
 
-        // Adicionando o texto
         gbc.gridy = 1;
         gbc.weighty = 0.6;
         JLabel labelText = new JLabel(label, SwingConstants.CENTER);
@@ -66,10 +64,19 @@ abstract class FeedbackButton extends JButton implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         try {
-            String feedbackComment = JOptionPane.showInputDialog(feedbackGUI, "Nos forneça um feedback aqui: ", label.toUpperCase());
-            if (feedbackComment != null) {
-                feedbackGUI.addFeedbackComment(feedbackComment);
-                updateCount();
+            JTextArea feedbackTextArea = new JTextArea(5, 30);
+            feedbackTextArea.setLineWrap(true);
+            feedbackTextArea.setWrapStyleWord(true);
+            feedbackTextArea.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            JScrollPane scrollPane = new JScrollPane(feedbackTextArea);
+
+            int option = JOptionPane.showConfirmDialog(feedbackGUI, scrollPane, "Nos forneça um feedback aqui: ", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                String feedbackComment = feedbackTextArea.getText();
+                if (feedbackComment != null && !feedbackComment.trim().isEmpty()) {
+                    feedbackGUI.addFeedbackComment(feedbackComment);
+                    updateCount();
+                }
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -77,26 +84,24 @@ abstract class FeedbackButton extends JButton implements ActionListener {
     }
 }
 
-// Classes para os botões específicos
 class BomButton extends FeedbackButton {
     public BomButton(FeedbackGUI feedbackGUI, JLabel countLabel) {
-        super(feedbackGUI, countLabel, "Bom", "😊", Color.decode("#4CAF50"));
+        super(feedbackGUI, countLabel, "Bom", "😊", Color.decode("#66BB6A"));
     }
 }
 
 class MedioButton extends FeedbackButton {
     public MedioButton(FeedbackGUI feedbackGUI, JLabel countLabel) {
-        super(feedbackGUI, countLabel, "Médio", "😐", Color.decode("#FFC107"));
+        super(feedbackGUI, countLabel, "Médio", "😐", Color.decode("#FFEB3B"));
     }
 }
 
 class RuimButton extends FeedbackButton {
     public RuimButton(FeedbackGUI feedbackGUI, JLabel countLabel) {
-        super(feedbackGUI, countLabel, "Ruim", "😞", Color.decode("#F44336"));
+        super(feedbackGUI, countLabel, "Ruim", "😞", Color.decode("#EF5350"));
     }
 }
 
-// Classe para contagens de feedback
 class FeedbackCounts implements Serializable {
     private static final long serialVersionUID = 1L;
     private int bomCount;
@@ -134,7 +139,6 @@ class FeedbackCounts implements Serializable {
     }
 }
 
-// Classe para comentários de feedback
 class FeedbackComments implements Serializable {
     private static final long serialVersionUID = 1L;
     private List<String> comments;
@@ -152,7 +156,6 @@ class FeedbackComments implements Serializable {
     }
 }
 
-// Classe principal FeedbackGUI
 public class FeedbackGUI extends JFrame {
     private JLabel bomLabel;
     private JLabel medioLabel;
@@ -161,7 +164,6 @@ public class FeedbackGUI extends JFrame {
     private int medioCount;
     private int ruimCount;
     private JPanel panel;
-    private DefaultListModel<String> historyModel;
     private FeedbackCounts feedbackCounts;
     private FeedbackComments feedbackComments;
 
@@ -207,7 +209,6 @@ public class FeedbackGUI extends JFrame {
         });
         buttonPanel.add(qrButton);
 
-        // Adicionando botão de exportação
         JButton exportButton = new JButton("Exportar Feedbacks para CSV");
         exportButton.setFont(new Font("Segoe UI", Font.BOLD, 20));
         exportButton.addActionListener(new ActionListener() {
@@ -220,19 +221,9 @@ public class FeedbackGUI extends JFrame {
 
         add(buttonPanel, BorderLayout.NORTH);
 
-        // Adicionando o painel de histórico de feedbacks
-        historyModel = new DefaultListModel<>();
-        JList<String> historyList = new JList<>(historyModel);
-        JScrollPane scrollPane = new JScrollPane(historyList);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Histórico de Feedbacks"));
-        add(scrollPane, BorderLayout.EAST);
-
-        // Carregar histórico de feedbacks
         feedbackComments = loadFeedbackComments();
-        loadFeedbackHistory();
-
-        // Carregar contagens de feedbacks
         feedbackCounts = loadFeedbackCounts();
+
         bomCount = feedbackCounts.getBomCount();
         medioCount = feedbackCounts.getMedioCount();
         ruimCount = feedbackCounts.getRuimCount();
@@ -262,67 +253,27 @@ public class FeedbackGUI extends JFrame {
     }
 
     public void updateBackgroundColor() {
-        if (bomCount > 10 && bomCount > medioCount && bomCount > ruimCount) {
-            panel.setBackground(Color.decode("#C8E6C9")); // Verde claro
-        } else if (medioCount > 10 && medioCount > bomCount && medioCount > ruimCount) {
-            panel.setBackground(Color.decode("#FFF9C4")); // Amarelo claro
-        } else if (ruimCount > 10 && ruimCount > bomCount && ruimCount > medioCount) {
+        if (bomCount > medioCount && bomCount > ruimCount) {
+            panel.setBackground(Color.decode("#A5D6A7")); // Verde claro
+        } else if (medioCount > bomCount && medioCount > ruimCount) {
+            panel.setBackground(Color.decode("#FFF59D")); // Amarelo claro
+        } else if (ruimCount > bomCount && ruimCount > medioCount) {
             panel.setBackground(Color.decode("#FFCDD2")); // Vermelho claro
         } else {
-            panel.setBackground(Color.WHITE); // Branco
+            panel.setBackground(Color.WHITE);
         }
     }
 
     public void addFeedbackComment(String comment) {
         feedbackComments.addComment(comment);
         saveFeedbackComments();
-        addFeedbackToHistory(comment);
-    }
-
-    public void loadFeedbackHistory() {
-        if (feedbackComments != null) {
-            for (String comment : feedbackComments.getComments()) {
-                historyModel.addElement(comment);
-            }
-        }
-    }
-
-    public void exportFeedbacksToCSV() {
-        try (PrintWriter writer = new PrintWriter(new File("feedbacks.csv"))) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Tipo");
-            sb.append(',');
-            sb.append("Quantidade");
-            sb.append('\n');
-
-            sb.append("Bom");
-            sb.append(',');
-            sb.append(bomCount);
-            sb.append('\n');
-
-            sb.append("Médio");
-            sb.append(',');
-            sb.append(medioCount);
-            sb.append('\n');
-
-            sb.append("Ruim");
-            sb.append(',');
-            sb.append(ruimCount);
-            sb.append('\n');
-
-            writer.write(sb.toString());
-            JOptionPane.showMessageDialog(this, "Feedbacks exportados com sucesso!");
-        } catch (FileNotFoundException e) {
-            JOptionPane.showMessageDialog(this, "Erro ao exportar feedbacks!");
-            e.printStackTrace();
-        }
     }
 
     public void showQRCode() {
         try {
             BufferedImage originalImage = ImageIO.read(getClass().getResource("qrcode.png"));
-            int maxWidth = 200;
-            int maxHeight = 200;
+            int maxWidth = 400;
+            int maxHeight = 400;
             int newWidth = originalImage.getWidth();
             int newHeight = originalImage.getHeight();
             if (newWidth > maxWidth || newHeight > maxHeight) {
@@ -330,68 +281,85 @@ public class FeedbackGUI extends JFrame {
                 if (newWidth > maxWidth) {
                     newWidth = maxWidth;
                     newHeight = (int) (newWidth / aspectRatio);
-                }
-                if (newHeight > maxHeight) {
+                } else if (newHeight > maxHeight) {
                     newHeight = maxHeight;
                     newWidth = (int) (newHeight * aspectRatio);
                 }
             }
+
             Image scaledImage = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
-            ImageIcon icon = new ImageIcon(scaledImage);
-            Font font = new Font("Arial", Font.BOLD, 18);
-            UIManager.put("OptionPane.messageFont", font);
-            UIManager.put("OptionPane.buttonFont", font);
-            JOptionPane.showMessageDialog(this, "Nos forneça um feedback construtivo em nosso site", "QR CODE", JOptionPane.INFORMATION_MESSAGE, icon);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            ImageIcon scaledIcon = new ImageIcon(scaledImage);
+
+            JLabel qrLabel = new JLabel(scaledIcon);
+            JOptionPane.showMessageDialog(this, qrLabel, "QR Code", JOptionPane.PLAIN_MESSAGE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void exportFeedbacksToCSV() {
+        try {
+            FileWriter writer = new FileWriter("feedbacks.csv");
+            BufferedWriter bufferedWriter = new BufferedWriter(writer);
+
+            bufferedWriter.write("Feedback,Comment\n");
+            for (String comment : feedbackComments.getComments()) {
+                bufferedWriter.write("Comentário," + comment + "\n");
+            }
+
+            bufferedWriter.close();
+            JOptionPane.showMessageDialog(this, "Feedbacks exportados com sucesso!", "Exportação", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public FeedbackCounts loadFeedbackCounts() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("feedback_counts.dat"))) {
-            return (FeedbackCounts) ois.readObject();
+        try {
+            FileInputStream fileInputStream = new FileInputStream("feedbackCounts.ser");
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            return (FeedbackCounts) objectInputStream.readObject();
         } catch (Exception e) {
             return new FeedbackCounts();
         }
     }
 
-    public void saveFeedbackCounts() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("feedback_counts.dat"))) {
-            oos.writeObject(feedbackCounts);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public FeedbackComments loadFeedbackComments() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("feedback_comments.dat"))) {
-            return (FeedbackComments) ois.readObject();
+        try {
+            FileInputStream fileInputStream = new FileInputStream("feedbackComments.ser");
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            return (FeedbackComments) objectInputStream.readObject();
         } catch (Exception e) {
             return new FeedbackComments();
         }
     }
 
-    public void saveFeedbackComments() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("feedback_comments.dat"))) {
-            oos.writeObject(feedbackComments);
-        } catch (Exception e) {
+    public void saveFeedbackCounts() {
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream("feedbackCounts.ser");
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(feedbackCounts);
+            objectOutputStream.close();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void addFeedbackToHistory(String feedback) {
-        historyModel.addElement(feedback + " - " + java.time.LocalDateTime.now());
+    public void saveFeedbackComments() {
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream("feedbackComments.ser");
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+            objectOutputStream.writeObject(feedbackComments);
+            objectOutputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
                 new FeedbackGUI().setVisible(true);
             }
         });
